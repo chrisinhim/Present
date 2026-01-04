@@ -1237,6 +1237,8 @@
                     const entryDuration = document.getElementById('entryAnimationDuration').value;
 
                     contentDiv.className = 'content'; // Reset classes
+                    // Start hidden to avoid flash before animation is applied
+                    contentDiv.style.opacity = '0';
                     contentDiv.style.display = 'block'; // Make visible FIRST
 
                     // Reflow to restart animation
@@ -1246,7 +1248,20 @@
                     contentDiv.style.animationDuration = `${entryDuration}ms`; // Apply duration
 
                     if (entryAnimation !== 'none') {
-                        contentDiv.classList.add(`animate-${entryAnimation}`);
+                        // Add animation on next frame so the initial hidden state takes effect
+                        requestAnimationFrame(() => {
+                            contentDiv.classList.add(`animate-${entryAnimation}`);
+
+                            // Clean up inline opacity once animation completes
+                            const onEnd = () => {
+                                contentDiv.style.opacity = '';
+                                contentDiv.removeEventListener('animationend', onEnd);
+                            };
+                            contentDiv.addEventListener('animationend', onEnd);
+                        });
+                    } else {
+                        // No animation -> make it fully visible immediately
+                        contentDiv.style.opacity = '1';
                     }
                 }
                 startAutoHideTimer();

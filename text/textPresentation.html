@@ -634,18 +634,33 @@
     function applyAnimation() {
         const animationWrapper = presentationWindow?.document.getElementById('animation-wrapper');
         const animation = document.getElementById('animationEffect').value;
-        if (!animationWrapper || animation === 'none') return;
+        if (!animationWrapper) return;
 
-        // Remove old animation classes
+        // If no animation selected, clear classes and ensure wrapper is visible
+        if (animation === 'none') {
+            animationWrapper.classList.remove('animate-fade-in', 'animate-slide-in-top', 'animate-zoom-in');
+            animationWrapper.style.opacity = '';
+            return;
+        }
+
+        // Remove old animation classes and force an initial hidden state to prevent flash
         animationWrapper.classList.remove('animate-fade-in', 'animate-slide-in-top', 'animate-zoom-in');
+        animationWrapper.style.opacity = '0';
 
-        // We need to trigger a reflow for the animation to restart.
+        // We need to trigger a reflow for the hidden state to take effect
         void animationWrapper.offsetWidth;
 
         // We must wait for the next frame for the browser to apply the animation class
-        // after the element has been made visible.
+        // after the element has been made hidden.
         requestAnimationFrame(() => {
             animationWrapper.classList.add(`animate-${animation}`);
+
+            // Clean up inline opacity when the animation ends
+            const onEnd = () => {
+                animationWrapper.style.opacity = '';
+                animationWrapper.removeEventListener('animationend', onEnd);
+            };
+            animationWrapper.addEventListener('animationend', onEnd);
         });
     }
 
@@ -695,14 +710,16 @@
             const wrapper = presentationWindow.document.getElementById('content-wrapper');
             const contentDiv = presentationWindow.document.getElementById('content');
             if (contentDiv && wrapper) {
-                wrapper.style.display = 'block'; // Make it visible again as a block element for animations
-                contentDiv.textContent = text;
-                applyAnimation();
-                // Re-apply alignment as it depends on text content
-                const hAlign = document.querySelector('.alignment-button[data-align-h].active')?.dataset.alignH || 'center';
-                contentDiv.style.textAlign = (hAlign === 'flex-start' ? 'left' : (hAlign === 'flex-end' ? 'right' : 'center'));
-                applyAutoHide();
-            }
+                    const animationWrapper = presentationWindow.document.getElementById('animation-wrapper');
+                    if (animationWrapper) animationWrapper.style.opacity = '0';
+                    wrapper.style.display = 'block'; // Make it visible again as a block element for animations
+                    contentDiv.textContent = text;
+                    applyAnimation();
+                    // Re-apply alignment as it depends on text content
+                    const hAlign = document.querySelector('.alignment-button[data-align-h].active')?.dataset.alignH || 'center';
+                    contentDiv.style.textAlign = (hAlign === 'flex-start' ? 'left' : (hAlign === 'flex-end' ? 'right' : 'center'));
+                    applyAutoHide();
+                }
         } else {
             // If window is not open, open it. The text will be applied by applyAllSettingsToWindow().
             togglePresentationWindow();
